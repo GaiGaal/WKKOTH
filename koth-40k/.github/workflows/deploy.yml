@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      # SPA fallback so GH Pages handles client-side routing
+      # SPA fallback so GH Pages serves client routes
       - name: Add 404 fallback
         run: cp dist/index.html dist/404.html
 
