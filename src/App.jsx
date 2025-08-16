@@ -450,8 +450,7 @@ export default function App() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Stat title="Players" value={players.length} />
               <Stat title="Matches" value={state.history.length} />
-              <Stat title="Current King" value={king?.name || "—"} />
-              <Stat title="Current Streak" value={king ? kingStreak : 0} />
+              <Stat title="Longest Streak" value={`${longestStreak.count} — ${longestStreakName}`} />
             </div>
           </Section>
         </div>
