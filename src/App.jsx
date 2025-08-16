@@ -279,6 +279,35 @@ export default function App() {
     }
   };
 
+  // Longest overall streak across the full history
+  const longestStreak = useMemo(() => {
+    if (state.history.length === 0) return { count: 0, playerId: null };
+    // Iterate oldest -> newest so consecutive wins by same king form a streak
+    const hist = [...state.history].reverse();
+    let currentKingId = null;
+    let currentCount = 0;
+    let best = { count: 0, playerId: null };
+
+    for (const match of hist) {
+      const winnerId = match.winnerId;
+      if (winnerId === currentKingId) {
+        currentCount += 1;
+      } else {
+        currentKingId = winnerId;
+        currentCount = 1;
+      }
+      if (currentCount > best.count) {
+        best = { count: currentCount, playerId: currentKingId };
+      }
+    }
+    return best;
+  }, [state.history]);
+
+  const longestStreakName = useMemo(
+    () => players.find((p) => p.id === longestStreak.playerId)?.name || "—",
+    [players, longestStreak.playerId]
+  );
+
   const onLockClick = () => {
     setUnlocked(false);
     localStorage.removeItem(UNLOCK_LS_KEY);
