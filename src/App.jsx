@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// --- Local storage key ---
+// --- Local storage keys ---
 const LS_KEY = "koth40k_state_v1";
+const UNLOCK_LS_KEY = "koth40k_players_unlocked_v1";
 
 // --- Utils ---
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -139,7 +140,9 @@ function HistoryRow({ match, players, onDelete }) {
       </td>
       <td className="py-2 text-sm">{winner?.name}</td>
       <td className="py-2 text-sm">{loser?.name}</td>
-      <td className="py-2 text-sm max-w-[250px] truncate" title={match.notes}>{match.notes || "—"}</td>
+      <td className="py-2 text-sm max-w-[250px] truncate" title={match.notes}>
+        {match.notes || "—"}
+      </td>
       <td className="py-2 text-right">
         <button
           className="text-sm text-red-600 hover:text-red-700"
@@ -161,6 +164,10 @@ export default function App() {
   const [winner, setWinner] = useState("king"); // "king" or "opponent"
   const fileRef = useRef(null);
 
+  // --- Players gate state ---
+  const [showPlayers, setShowPlayers] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+
   // Load from URL (shared) or localStorage
   useEffect(() => {
     const shared = decodeShare(window.location.hash);
@@ -170,8 +177,14 @@ export default function App() {
     }
     const saved = localStorage.getItem(LS_KEY);
     if (saved) {
-      try { setState(JSON.parse(saved)); } catch {}
+      try {
+        setState(JSON.parse(saved));
+      } catch {}
     }
+
+    // Restore unlock state
+    const unlocked = localStorage.getItem(UNLOCK_LS_KEY);
+    if (unlocked === "true") setShowPlayers(true);
   }, []);
 
   // Persist to localStorage on change
@@ -180,7 +193,10 @@ export default function App() {
   }, [state]);
 
   const players = state.players;
-  const king = useMemo(() => players.find((p) => p.id === state.kingId) || null, [players, state.kingId]);
+  const king = useMemo(
+    () => players.find((p) => p.id === state.kingId) || null,
+    [players, state.kingId]
+  );
 
   const addPlayer = () => {
     const name = newPlayer.trim();
@@ -189,14 +205,21 @@ export default function App() {
     setNewPlayer("");
   };
 
-  const removeMatch = (id) => setState((s) => ({ ...s, history: s.history.filter((m) => m.id !== id) }));
+  const removeMatch = (id) =>
+    setState((s) => ({ ...s, history: s.history.filter((m) => m.id !== id) }));
 
   const recordMatch = () => {
     if (!state.kingId || !opponentId) return;
     const kingId = state.kingId;
     const winnerId = winner === "king" ? kingId : opponentId;
     const loserId = winner === "king" ? opponentId : kingId;
-    const match = { id: uid(), date: nowISO(), winnerId, loserId, notes: notes.trim() };
+    const match = {
+      id: uid(),
+      date: nowISO(),
+      winnerId,
+      loserId,
+      notes: notes.trim(),
+    };
 
     setState((s) => ({
       ...s,
@@ -209,9 +232,12 @@ export default function App() {
     setOpponentId("");
   };
 
-  const setInitialKing = (pid) => setState((s) => ({ ...s, kingId: pid }));
+  const setInitialKing = (pid) =>
+    setState((s) => ({ ...s, kingId: pid }));
 
-  const exportJSON = () => download("koth40k.json", JSON.stringify(state, null, 2));
+  const exportJSON = () =>
+    download("koth40k.json", JSON.stringify(state, null, 2));
+
   const importJSON = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -227,7 +253,9 @@ export default function App() {
 
   const shareLink = () => {
     const url = encodeShare(state);
-    navigator.clipboard.writeText(url).then(() => alert("Read-only link copied to clipboard!"));
+    navigator.clipboard
+      .writeText(url)
+      .then(() => alert("Read-only link copied to clipboard!"));
   };
 
   const kingStreak = useMemo(() => {
@@ -240,21 +268,52 @@ export default function App() {
     return streak;
   }, [state.history, state.kingId]);
 
+  // --- Unlock / Lock handlers ---
+  const unlockPlayers = () => {
+    const PASSWORD = "secret123"; // <- change this
+    if (passwordInput === PASSWORD) {
+      setShowPlayers(true);
+      localStorage.setItem(UNLOCK_LS_KEY, "true"); // persist unlock
+    } else {
+      alert("Wrong password");
+    }
+    setPasswordInput("");
+  };
+
+  const lockPlayers = () => {
+    setShowPlayers(false);
+    localStorage.removeItem(UNLOCK_LS_KEY);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 text-zinc-900 dark:text-zinc-50">
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-3">
-              <span className="inline-block w-8 h-8 rounded-lg bg-amber-400 text-amber-950 font-black grid place-items-center">👑</span>
+              <span className="inline-block w-8 h-8 rounded-lg bg-amber-400 text-amber-950 font-black grid place-items-center">
+                👑
+              </span>
               40K — King of the Hill
             </h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">Track your club’s reigning champion, record matches, and share a read‑only scoreboard.</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Track your club’s reigning champion, record matches, and share a read-only scoreboard.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <OutlineButton onClick={exportJSON}>⬇️ Export</OutlineButton>
-            <OutlineButton onClick={() => fileRef.current?.click()}>⬆️ Import</OutlineButton>
-            <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && importJSON(e.target.files[0])} />
+            <OutlineButton onClick={() => fileRef.current?.click()}>
+              ⬆️ Import
+            </OutlineButton>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) =>
+                e.target.files?.[0] && importJSON(e.target.files[0])
+              }
+            />
             <PrimaryButton onClick={shareLink}>🔗 Share link</PrimaryButton>
           </div>
         </header>
@@ -264,15 +323,21 @@ export default function App() {
           <Section title="Current King" subtitle="Who sits on the throne right now.">
             {!king ? (
               <div className="space-y-3">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">No king yet. Choose a starting king:</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  No king yet. Choose a starting king:
+                </p>
                 <select
                   className="h-10 w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3"
                   onChange={(e) => setInitialKing(e.target.value)}
                   defaultValue=""
                 >
-                  <option value="" disabled>Select player</option>
+                  <option value="" disabled>
+                    Select player
+                  </option>
                   {players.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -292,21 +357,35 @@ export default function App() {
                       onChange={(e) => setOpponentId(e.target.value)}
                     >
                       <option value="">Select challenger</option>
-                      {players.filter((p) => p.id !== state.kingId).map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
+                      {players
+                        .filter((p) => p.id !== state.kingId)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
                     </select>
-                    <PrimaryButton onClick={recordMatch} disabled={!opponentId}>Record</PrimaryButton>
+                    <PrimaryButton onClick={recordMatch} disabled={!opponentId}>
+                      Record
+                    </PrimaryButton>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <button
-                      className={`h-10 rounded-xl border ${winner === "king" ? "bg-indigo-600 text-white border-indigo-600" : "border-zinc-300 dark:border-zinc-700"}`}
+                      className={`h-10 rounded-xl border ${
+                        winner === "king"
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "border-zinc-300 dark:border-zinc-700"
+                      }`}
                       onClick={() => setWinner("king")}
                     >
                       Winner: {king?.name}
                     </button>
                     <button
-                      className={`h-10 rounded-xl border ${winner === "opponent" ? "bg-indigo-600 text-white border-indigo-600" : "border-zinc-300 dark:border-zinc-700"}`}
+                      className={`h-10 rounded-xl border ${
+                        winner === "opponent"
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "border-zinc-300 dark:border-zinc-700"
+                      }`}
                       onClick={() => setWinner("opponent")}
                       disabled={!opponentId}
                     >
@@ -324,33 +403,60 @@ export default function App() {
             )}
           </Section>
 
-          {/* Players */}
+          {/* Players (password-gated) */}
           <Section title="Players" subtitle="Add and manage your club roster.">
-            <div className="flex gap-2 mb-3">
-              <TextInput
-                placeholder="Add player name"
-                value={newPlayer}
-                onChange={(e) => setNewPlayer(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addPlayer()}
-              />
-              <PrimaryButton onClick={addPlayer}>Add</PrimaryButton>
-            </div>
-            <ul className="space-y-2">
-              {players.map((p) => (
-                <li key={p.id} className="flex items-center justify-between">
-                  <PlayerPill name={p.name} />
-                  {state.kingId !== p.id && (
-                    <OutlineButton onClick={() => setInitialKing(p.id)}>Make King</OutlineButton>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {!showPlayers ? (
+              <div className="space-y-2">
+                <TextInput
+                  type="password"
+                  placeholder="Enter password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && unlockPlayers()}
+                />
+                <PrimaryButton onClick={unlockPlayers}>Pass</PrimaryButton>
+                <p className="text-xs text-zinc-500">
+                  Access to roster editing is locked.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <Pill>🔓 Unlocked</Pill>
+                  <OutlineButton onClick={lockPlayers}>Lock</OutlineButton>
+                </div>
+
+                <div className="flex gap-2 mb-3">
+                  <TextInput
+                    placeholder="Add player name"
+                    value={newPlayer}
+                    onChange={(e) => setNewPlayer(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addPlayer()}
+                  />
+                  <PrimaryButton onClick={addPlayer}>Add</PrimaryButton>
+                </div>
+                <ul className="space-y-2">
+                  {players.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between">
+                      <PlayerPill name={p.name} />
+                      {state.kingId !== p.id && (
+                        <OutlineButton onClick={() => setInitialKing(p.id)}>
+                          Make King
+                        </OutlineButton>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </Section>
 
           {/* Match History */}
           <Section title="Match History" subtitle="Latest first.">
             {state.history.length === 0 ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">No matches yet. Record your first challenge!</p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                No matches yet. Record your first challenge!
+              </p>
             ) : (
               <div className="overflow-auto">
                 <table className="w-full text-left text-sm">
@@ -365,7 +471,12 @@ export default function App() {
                   </thead>
                   <tbody>
                     {state.history.map((m) => (
-                      <HistoryRow key={m.id} match={m} players={players} onDelete={removeMatch} />
+                      <HistoryRow
+                        key={m.id}
+                        match={m}
+                        players={players}
+                        onDelete={removeMatch}
+                      />
                     ))}
                   </tbody>
                 </table>
@@ -374,7 +485,7 @@ export default function App() {
           </Section>
 
           {/* Summary */}
-          <Section title="Club Summary" subtitle="Quick stats at a glance." >
+          <Section title="Club Summary" subtitle="Quick stats at a glance.">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Stat title="Players" value={players.length} />
               <Stat title="Matches" value={state.history.length} />
@@ -385,7 +496,7 @@ export default function App() {
         </div>
 
         <footer className="text-center text-xs text-zinc-500 pt-4">
-          Built for Warhammer 40K clubs • Data is stored locally in your browser • Use “Share link” for read‑only sharing
+          Built for Warhammer 40K clubs • Data is stored locally in your browser • Use “Share link” for read-only sharing
         </footer>
       </div>
     </div>
