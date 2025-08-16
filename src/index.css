@@ -1,7 +1,6 @@
-/* keep this FIRST */
 @import "tailwindcss";
 
-/* keep only neutral, non-color globals or remove completely */
+/* keep globals minimal */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -11,9 +10,3 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* optional link styling from Vite starter */
-a { font-weight: 500; }
-a:hover { text-decoration: underline; }
-
-/* DO NOT set body/text colors here; our React uses Tailwind classes already */
