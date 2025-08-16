@@ -506,13 +506,12 @@ const longestStreakName = useMemo(
 
           {/* Summary */}
           <Section title="Club Summary" subtitle="Quick stats at a glance.">
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <Stat title="Players" value={players.length} />
-    <Stat title="Matches" value={state.history.length} />
-    <Stat title="Longest Streak" value={`${longestStreak.count} — ${longestStreakName}`} />
-  </div>
-</Section>
-
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Stat title="Players" value={players.length} />
+              <Stat title="Matches" value={state.history.length} />
+              <Stat title="Longest Streak" value={`${longestStreak.count} — ${longestStreakName}`} />
+            </div>
+          </Section>
         </div>
 
         <footer className="text-center text-xs text-zinc-500 pt-4">
