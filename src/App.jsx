@@ -266,6 +266,36 @@ export default function App() {
     return streak;
   }, [state.history, state.kingId]);
 
+  // Longest overall streak across the full history (by consecutive defenses)
+const longestStreak = useMemo(() => {
+  if (state.history.length === 0) return { count: 0, playerId: null };
+  // Evaluate oldest -> newest so consecutive wins by the same king form a streak
+  const hist = [...state.history].reverse();
+  let currentKingId = null;
+  let currentCount = 0;
+  let best = { count: 0, playerId: null };
+
+  for (const match of hist) {
+    const { winnerId } = match;
+    if (winnerId === currentKingId) {
+      currentCount += 1;
+    } else {
+      currentKingId = winnerId;
+      currentCount = 1;
+    }
+    if (currentCount > best.count) {
+      best = { count: currentCount, playerId: currentKingId };
+    }
+  }
+  return best;
+}, [state.history]);
+
+const longestStreakName = useMemo(
+  () => players.find((p) => p.id === longestStreak.playerId)?.name || "—",
+  [players, longestStreak.playerId]
+);
+
+
   // --- Unlock / Lock handlers (header "Pass" button) ---
   const PASSWORD = "secret123"; // change this
   const onPassClick = () => {
@@ -476,12 +506,13 @@ export default function App() {
 
           {/* Summary */}
           <Section title="Club Summary" subtitle="Quick stats at a glance.">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Stat title="Players" value={players.length} />
-              <Stat title="Matches" value={state.history.length} />
-              <Stat title="Longest Streak" value={`${longestStreak.count} — ${longestStreakName}`} />
-            </div>
-          </Section>
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <Stat title="Players" value={players.length} />
+    <Stat title="Matches" value={state.history.length} />
+    <Stat title="Longest Streak" value={`${longestStreak.count} — ${longestStreakName}`} />
+  </div>
+</Section>
+
         </div>
 
         <footer className="text-center text-xs text-zinc-500 pt-4">
