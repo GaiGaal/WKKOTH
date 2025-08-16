@@ -407,12 +407,7 @@ const longestStreakName = useMemo(
 
           {/* Players (roster always visible; add/make king gated) */}
           <Section
-            title="Players"
-            subtitle={
-              unlocked
-                ? "Add and manage your club roster."
-                : "Roster visible. Use Pass to edit."
-            }
+            title="Mitspieler"
           >
             {unlocked && (
               <div className="flex gap-2 mb-3">
@@ -476,13 +471,17 @@ const longestStreakName = useMemo(
           </Section>
 
           {/* Summary */}
-          <Section title="Club Summary" subtitle="Quick stats at a glance.">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Stat title="Players" value={players.length} />
-              <Stat title="Matches" value={state.history.length} />
-              <Stat title="Longest Streak" value={`${longestStreak.count} — ${longestStreakName}`} />
-            </div>
+<Section title="Club Summary" subtitle="Quick stats at a glance.">
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <Stat title="Players" value={players.length} />
+    <Stat title="Matches" value={state.history.length} />
+    <Stat
+      title={longestStreak.count ? `Longest Streak — ${longestStreakName}` : "Longest Streak"}
+      value={longestStreak.count || "—"}
+    />
+  </div>
 </Section>
+
 
         </div>
 
@@ -496,9 +495,9 @@ const longestStreakName = useMemo(
 
 function Stat({ title, value }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4">
+    <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 min-h-[96px] flex flex-col items-center justify-center text-center">
       <p className="text-sm text-zinc-500">{title}</p>
-      <p className="text-2xl font-semibold">{String(value)}</p>
+      <p className="text-2xl font-semibold leading-tight">{String(value)}</p>
     </div>
   );
 }
